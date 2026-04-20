@@ -32,7 +32,7 @@
     .rotary-wheel {
       position: absolute;
       top: 35%; 
-      left: -25vw; /* Pushed further left to avoid page overlap */
+      left: -25vw; 
       width: 80vw; 
       height: 80vw;
       min-width: 900px; 
@@ -54,7 +54,7 @@
     .menu-item {
       position: absolute;
       right: 20px; 
-      pointer-events: auto; /* Ensure it stays clickable */
+      pointer-events: auto; 
       color: #39ff14;
       font-size: clamp(16px, 1.8vw, 24px);
       letter-spacing: 2px;
@@ -201,11 +201,10 @@
     // ==========================================
     // AUDIO ENGINE (WAV formats + Volume Adjust)
     // ==========================================
-    const sfxScroll = new Audio('scroll.mp3'); // Keeping scroll as mp3 based on your prompt
-    const sfxOpen = new Audio('open.wav');     // Changed to .wav
-    const sfxClose = new Audio('close.wav');   // Changed to .wav
+    const sfxScroll = new Audio('scroll.mp3'); 
+    const sfxOpen = new Audio('open.wav');     
+    const sfxClose = new Audio('close.wav');   
 
-    // Set volumes to 75%
     sfxScroll.volume = 0.75;
     sfxOpen.volume = 0.75;
     sfxClose.volume = 0.75;
@@ -271,7 +270,8 @@
     const hexMat = new THREE.MeshBasicMaterial({
         map: createHexTexture(), transparent: true, blending: THREE.AdditiveBlending, side: THREE.BackSide
     });
-    const hexSphereMesh = new Mesh(new THREE.SphereGeometry(HEX_RADIUS, 64, 64), hexMat);
+    // FIXED: Added THREE. prefix here
+    const hexSphereMesh = new THREE.Mesh(new THREE.SphereGeometry(HEX_RADIUS, 64, 64), hexMat);
     scene.add(hexSphereMesh);
 
     const latLongGeo = new THREE.SphereGeometry(LATLONG_RADIUS, 32, 16);
@@ -300,7 +300,6 @@
     const holoMeshWire = new THREE.Mesh(holoGeometry, holoMatWire);
     const holoMeshSolid = new THREE.Mesh(holoGeometry, holoMatSolid);
     
-    // Core shifted to -5.5 to completely clear the page element
     holoMeshWire.position.set(-5.5, 0, -10);
     holoMeshSolid.position.set(-5.5, 0, -10);
     scene.add(holoMeshWire);
@@ -315,13 +314,11 @@
     // 3. FLOATING GAINGUARD LOGO & SOLID CHROME SHIELD
     // ==========================================
     const logoCanvas = document.createElement('canvas');
-    // Widened canvas to 1600 to prevent any left/right edge cutoffs
     logoCanvas.width = 1600; 
     logoCanvas.height = 300;
     const lctx = logoCanvas.getContext('2d');
     
     lctx.save();
-    // Centered shield coordinates for the wider canvas
     lctx.translate(300, 150); 
     lctx.scale(0.7, 0.7); 
     lctx.translate(-120, -170); 
@@ -335,15 +332,14 @@
     lctx.lineTo(10, 50);
     lctx.closePath();
     
-    // Intense Solid Chrome Gradient
     const shieldGradient = lctx.createLinearGradient(120, 15, 120, 325);
-    shieldGradient.addColorStop(0, '#ffffff');    // Bright highlight
-    shieldGradient.addColorStop(0.3, '#99aab5');  // Mid steel
-    shieldGradient.addColorStop(0.48, '#2c3e50'); // Dark slate
-    shieldGradient.addColorStop(0.50, '#000000'); // Harsh reflection line
-    shieldGradient.addColorStop(0.52, '#bdc3c7'); // Bright bounce reflection
-    shieldGradient.addColorStop(0.8, '#7f8c8d');  // Mid steel
-    shieldGradient.addColorStop(1, '#ffffff');    // Bottom edge highlight
+    shieldGradient.addColorStop(0, '#ffffff');    
+    shieldGradient.addColorStop(0.3, '#99aab5');  
+    shieldGradient.addColorStop(0.48, '#2c3e50'); 
+    shieldGradient.addColorStop(0.50, '#000000'); 
+    shieldGradient.addColorStop(0.52, '#bdc3c7'); 
+    shieldGradient.addColorStop(0.8, '#7f8c8d');  
+    shieldGradient.addColorStop(1, '#ffffff');    
     
     lctx.fillStyle = shieldGradient;
     lctx.fill();
@@ -369,9 +365,8 @@
     lctx.fillRect(400, 210, 200, 8);
 
     const logoTex = new THREE.CanvasTexture(logoCanvas);
-    // REMOVED AdditiveBlending here so the dark chrome colors don't become transparent!
     const logoMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(10.6, 2), // Updated aspect ratio to match 1600x300
+        new THREE.PlaneGeometry(10.6, 2), 
         new THREE.MeshBasicMaterial({ map: logoTex, transparent: true, depthWrite: false })
     );
     scene.add(logoMesh);
@@ -411,7 +406,6 @@
       requestAnimationFrame(animate);
       const time = clock.getElapsedTime();
 
-      // Scaled down mobile logo properly
       const isMobile = window.innerWidth <= 768;
       const targetX = isMobile ? 0 : -5.5;  
       const targetY = isMobile ? 3.5 : 1.5;
@@ -528,7 +522,7 @@
         
         let opacity = Math.max(0, 1 - (dist / (ITEM_ANGLE * 2.5)));
         item.style.opacity = opacity;
-        item.style.pointerEvents = 'auto'; // Ensures low opacity items are always clickable
+        item.style.pointerEvents = 'auto'; 
       });
     }
 
@@ -572,7 +566,6 @@
     function dragMove(e) {
       if (!isDragging || e.target.closest('#page-wrapper')) return;
       let clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      // Adjusted multiplier to make swiping smoother and more proportional
       currentRotation = startRotation + ((clientY - startY) * 0.25); 
       updateWheelVisuals();
     }
