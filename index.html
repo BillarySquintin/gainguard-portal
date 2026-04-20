@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GainGuard - Protect Your Gains</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #000;
+      font-family: 'Arial Black', Impact, sans-serif;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      touch-action: none; 
+    }
+
+    #ui-layer {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none; 
+      overflow: hidden;
+      z-index: 10; 
+    }
+
+    /* --- DESKTOP ROTARY WHEEL (Shifted even further left) --- */
+    .rotary-wheel {
+      position: absolute;
+      top: 35%; 
+      left: -25vw; /* Pushed further left to avoid page overlap */
+      width: 80vw; 
+      height: 80vw;
+      min-width: 900px; 
+      min-height: 900px;
+      margin-top: calc(max(-40vw, -450px)); 
+      border-radius: 50%;
+      transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .spoke {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 0;
+      transform-origin: center;
+    }
+
+    .menu-item {
+      position: absolute;
+      right: 20px; 
+      pointer-events: auto; /* Ensure it stays clickable */
+      color: #39ff14;
+      font-size: clamp(16px, 1.8vw, 24px);
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(57, 255, 20, 0.8);
+      border: 3px solid #39ff14;
+      border-radius: 25px 0 0 0; 
+      padding: 12px 25px 12px 60px;
+      background: rgba(0, 30, 0, 0.7);
+      cursor: pointer;
+      text-transform: uppercase;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+      transform: translateY(-50%);
+      transition: all 0.3s ease;
+      opacity: 0; 
+      text-align: right;
+    }
+
+    .menu-item::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)" opacity="0.05"/></svg>');
+      pointer-events: none;
+      border-radius: inherit;
+    }
+
+    .menu-item.active {
+      background: rgba(57, 255, 20, 0.25);
+      box-shadow: 0 0 20px rgba(57, 255, 20, 0.6), inset 0 0 15px rgba(57, 255, 20, 0.3);
+      color: #fff;
+      transform: translate(30px, -50%);
+    }
+
+    /* --- SCI-FI CONTENT PAGE --- */
+    #page-wrapper {
+      position: absolute;
+      right: 4vw;
+      top: 50%;
+      transform: translateY(-50%) translateX(120%); 
+      width: 38vw;
+      height: 65vh;
+      min-width: 350px;
+      padding: 4px; 
+      background: linear-gradient(135deg, #eee 0%, #777 25%, #ccc 50%, #333 75%, #fff 100%);
+      clip-path: polygon(40px 0, 100% 0, 100% calc(100% - 40px), calc(100% - 40px) 100%, 0 100%, 0 40px);
+      transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.5s;
+      opacity: 0;
+      z-index: 20;
+      pointer-events: none; 
+    }
+
+    #page-wrapper.open {
+      transform: translateY(-50%) translateX(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .page-content {
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 15, 10, 0.95);
+      clip-path: polygon(36px 0, 100% 0, 100% calc(100% - 36px), calc(100% - 36px) 100%, 0 100%, 0 36px);
+      padding: 40px;
+      box-sizing: border-box;
+      color: #fff;
+      overflow-y: auto;
+      touch-action: pan-y; 
+      background-image: url('data:image/svg+xml;utf8,<svg width="40" height="69.28203230275509" viewBox="0 0 40 69.28203230275509" xmlns="http://www.w3.org/2000/svg"><path d="M 40 17.3205081 L 40 51.961524 L 20 63.50851 L 0 51.961524 L 0 17.3205081 L 20 5.77350269 Z" fill="none" stroke="rgba(57,255,20,0.05)" stroke-width="1"/></svg>');
+    }
+
+    .page-content::-webkit-scrollbar { width: 8px; }
+    .page-content::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.5); }
+    .page-content::-webkit-scrollbar-thumb { background: #39ff14; border-radius: 4px; }
+
+    #page-title {
+      font-size: 28px;
+      color: #39ff14;
+      margin-top: 0;
+      text-transform: uppercase;
+      border-bottom: 2px solid rgba(57, 255, 20, 0.3);
+      padding-bottom: 10px;
+    }
+    #page-body h3 { color: #fff; margin-top: 25px; margin-bottom: 5px; }
+    #page-body strong { color: #39ff14; }
+    #page-body p, #page-body li { line-height: 1.6; font-family: Arial, sans-serif; font-size: 16px; }
+    #page-body ul { padding-left: 20px; }
+    
+    .pricing-tier {
+      margin-bottom: 15px;
+      border-left: 4px solid #39ff14;
+      padding-left: 15px;
+      background: rgba(57, 255, 20, 0.05);
+      padding-top: 5px; padding-bottom: 5px;
+    }
+
+    /* --- MOBILE RESPONSIVE SCALING --- */
+    @media (max-width: 768px) {
+      .rotary-wheel {
+        top: 25%;
+        left: -40vw; 
+        width: 140vw; 
+        height: 140vw;
+        min-width: 0; 
+        min-height: 0;
+        margin-top: -70vw; 
+      }
+      .menu-item {
+        font-size: clamp(14px, 4vw, 20px);
+        padding: 10px 20px 10px 45px;
+        right: 10px;
+      }
+      #page-wrapper {
+        right: auto;
+        left: 50%;
+        top: auto;
+        bottom: 2vh;
+        transform: translateX(-50%) translateY(120%); 
+        width: 90vw;
+        height: 45vh;
+        min-width: 0;
+      }
+      #page-wrapper.open {
+        transform: translateX(-50%) translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="ui-layer">
+    <div class="rotary-wheel" id="wheel"></div>
+    <div id="page-wrapper">
+      <div class="page-content">
+        <h2 id="page-title">Title</h2>
+        <div id="page-body">Content goes here...</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://esm.sh/three@0.133.1";
+    import openSimplexNoise from 'https://esm.sh/open-simplex-noise';
+
+    // ==========================================
+    // AUDIO ENGINE (WAV formats + Volume Adjust)
+    // ==========================================
+    const sfxScroll = new Audio('scroll.mp3'); // Keeping scroll as mp3 based on your prompt
+    const sfxOpen = new Audio('open.wav');     // Changed to .wav
+    const sfxClose = new Audio('close.wav');   // Changed to .wav
+
+    // Set volumes to 75%
+    sfxScroll.volume = 0.75;
+    sfxOpen.volume = 0.75;
+    sfxClose.volume = 0.75;
+
+    function playSfx(audioObj) {
+        audioObj.currentTime = 0;
+        audioObj.play().catch((e) => { console.log("Waiting for user interaction to play audio."); }); 
+    }
+
+    // ==========================================
+    // 1. THREE.JS ENVIRONMENT SETUP
+    // ==========================================
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x000500, 0.02);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const CORE_RADIUS = 20;
+    const HEX_RADIUS = 19.5;
+    const LATLONG_RADIUS = 19.0;
+
+    const bgSphereGeo = new THREE.SphereGeometry(CORE_RADIUS, 32, 32);
+    const bgSphereMat = new THREE.MeshBasicMaterial({ color: 0x001a00, side: THREE.BackSide });
+    scene.add(new THREE.Mesh(bgSphereGeo, bgSphereMat));
+
+    function createHexTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024; canvas.height = 1024;
+        const ctx = canvas.getContext('2d');
+        ctx.strokeStyle = 'rgba(57, 255, 20, 0.4)';
+        ctx.lineWidth = 4;
+        const r = 26; 
+        const w = Math.sqrt(3) * r;
+        const h = 2 * r;
+        
+        for(let y = 0; y < 1024 + h; y += h * 0.75) {
+            for(let x = 0; x < 1024 + w; x += w) {
+                let offset = (Math.round(y / (h * 0.75)) % 2) * (w / 2);
+                ctx.beginPath();
+                for(let i = 0; i < 6; i++) {
+                    let angle = Math.PI / 3 * i - Math.PI / 6;
+                    let px = x + offset + r * Math.cos(angle);
+                    let py = y + r * Math.sin(angle);
+                    if(i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+        }
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.wrapS = THREE.RepeatWrapping;
+        tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(4, 2); 
+        return tex;
+    }
+
+    const hexMat = new THREE.MeshBasicMaterial({
+        map: createHexTexture(), transparent: true, blending: THREE.AdditiveBlending, side: THREE.BackSide
+    });
+    const hexSphereMesh = new Mesh(new THREE.SphereGeometry(HEX_RADIUS, 64, 64), hexMat);
+    scene.add(hexSphereMesh);
+
+    const latLongGeo = new THREE.SphereGeometry(LATLONG_RADIUS, 32, 16);
+    const latLongMat = new THREE.LineBasicMaterial({ color: 0x22aa22, transparent: true, opacity: 0.15 });
+    const latLongLines = new THREE.LineSegments(new THREE.WireframeGeometry(latLongGeo), latLongMat);
+    scene.add(latLongLines);
+
+    // ==========================================
+    // 2. MORPHING HOLOGRAPHIC CORE
+    // ==========================================
+    const holoGeometry = new THREE.SphereGeometry(4, 80, 80);
+    holoGeometry.positionData = [];
+    let v3 = new THREE.Vector3();
+    for (let i = 0; i < holoGeometry.attributes.position.count; i++) {
+        v3.fromBufferAttribute(holoGeometry.attributes.position, i);
+        holoGeometry.positionData.push(v3.clone());
+    }
+
+    const holoMatWire = new THREE.MeshBasicMaterial({
+        color: 0x39ff14, transparent: true, opacity: 0.85, wireframe: true, blending: THREE.AdditiveBlending
+    });
+    const holoMatSolid = new THREE.MeshBasicMaterial({
+        color: 0x001a00, transparent: true, opacity: 0.8
+    });
+
+    const holoMeshWire = new THREE.Mesh(holoGeometry, holoMatWire);
+    const holoMeshSolid = new THREE.Mesh(holoGeometry, holoMatSolid);
+    
+    // Core shifted to -5.5 to completely clear the page element
+    holoMeshWire.position.set(-5.5, 0, -10);
+    holoMeshSolid.position.set(-5.5, 0, -10);
+    scene.add(holoMeshWire);
+    scene.add(holoMeshSolid);
+
+    const hitGeo = new THREE.SphereGeometry(4.2, 32, 32); 
+    const hitSphere = new THREE.Mesh(hitGeo, new THREE.MeshBasicMaterial({ visible: false }));
+    hitSphere.position.copy(holoMeshSolid.position); 
+    scene.add(hitSphere);
+
+    // ==========================================
+    // 3. FLOATING GAINGUARD LOGO & SOLID CHROME SHIELD
+    // ==========================================
+    const logoCanvas = document.createElement('canvas');
+    // Widened canvas to 1600 to prevent any left/right edge cutoffs
+    logoCanvas.width = 1600; 
+    logoCanvas.height = 300;
+    const lctx = logoCanvas.getContext('2d');
+    
+    lctx.save();
+    // Centered shield coordinates for the wider canvas
+    lctx.translate(300, 150); 
+    lctx.scale(0.7, 0.7); 
+    lctx.translate(-120, -170); 
+
+    lctx.beginPath();
+    lctx.moveTo(120, 15);
+    lctx.lineTo(230, 50);
+    lctx.lineTo(230, 190);
+    lctx.bezierCurveTo(230, 275, 120, 325, 120, 325);
+    lctx.bezierCurveTo(120, 325, 10, 275, 10, 190);
+    lctx.lineTo(10, 50);
+    lctx.closePath();
+    
+    // Intense Solid Chrome Gradient
+    const shieldGradient = lctx.createLinearGradient(120, 15, 120, 325);
+    shieldGradient.addColorStop(0, '#ffffff');    // Bright highlight
+    shieldGradient.addColorStop(0.3, '#99aab5');  // Mid steel
+    shieldGradient.addColorStop(0.48, '#2c3e50'); // Dark slate
+    shieldGradient.addColorStop(0.50, '#000000'); // Harsh reflection line
+    shieldGradient.addColorStop(0.52, '#bdc3c7'); // Bright bounce reflection
+    shieldGradient.addColorStop(0.8, '#7f8c8d');  // Mid steel
+    shieldGradient.addColorStop(1, '#ffffff');    // Bottom edge highlight
+    
+    lctx.fillStyle = shieldGradient;
+    lctx.fill();
+
+    lctx.shadowColor = '#39ff14';
+    lctx.shadowBlur = 15;
+    lctx.lineWidth = 12; 
+    lctx.strokeStyle = '#39ff14'; 
+    lctx.stroke();
+    lctx.restore();
+
+    lctx.fillStyle = '#39ff14'; 
+    lctx.font = 'bold 115px "Arial Black", Impact, sans-serif';
+    lctx.textAlign = 'center';
+    lctx.textBaseline = 'middle';
+    lctx.shadowColor = '#39ff14';
+    lctx.shadowBlur = 25;
+    lctx.fillText('GAINGUARD', 850, 130);
+
+    lctx.fillStyle = '#fff';
+    lctx.fillRect(400, 210, 900, 8);
+    lctx.fillStyle = '#39ff14';
+    lctx.fillRect(400, 210, 200, 8);
+
+    const logoTex = new THREE.CanvasTexture(logoCanvas);
+    // REMOVED AdditiveBlending here so the dark chrome colors don't become transparent!
+    const logoMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(10.6, 2), // Updated aspect ratio to match 1600x300
+        new THREE.MeshBasicMaterial({ map: logoTex, transparent: true, depthWrite: false })
+    );
+    scene.add(logoMesh);
+
+    // --- Core Raycasting Interaction Setup ---
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let isMouseMoving = false;
+    let targetCursor = new THREE.Vector3();
+    let currentCursor = new THREE.Vector3();
+    let localDentPoint = new THREE.Vector3();
+    let targetDentStrength = 0;
+    let currentDentStrength = 0;
+
+    function updateRaycastCoords(clientX, clientY) {
+        isMouseMoving = true;
+        mouse.x = (clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+    }
+
+    window.addEventListener('mousemove', (e) => updateRaycastCoords(e.clientX, e.clientY));
+
+    window.addEventListener('touchmove', (e) => {
+        if (e.target.closest('#page-wrapper') || e.target.closest('.menu-item')) return;
+        if (e.touches.length > 0) updateRaycastCoords(e.touches[0].clientX, e.touches[0].clientY);
+    }, {passive: true});
+
+    window.addEventListener('touchstart', (e) => {
+        if (e.target.closest('#page-wrapper') || e.target.closest('.menu-item')) return;
+        if (e.touches.length > 0) updateRaycastCoords(e.touches[0].clientX, e.touches[0].clientY);
+    }, {passive: true});
+
+    const noise = openSimplexNoise.makeNoise4D(Date.now());
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const time = clock.getElapsedTime();
+
+      // Scaled down mobile logo properly
+      const isMobile = window.innerWidth <= 768;
+      const targetX = isMobile ? 0 : -5.5;  
+      const targetY = isMobile ? 3.5 : 1.5;
+      const targetZ = isMobile ? -8 : -5;
+      const scale = isMobile ? 0.55 : 1.0; 
+
+      logoMesh.position.set(targetX, targetY + Math.sin(time * 1.5) * 0.2, targetZ);
+      logoMesh.scale.setScalar(scale);
+
+      latLongLines.rotation.y += 0.0002;
+      hexSphereMesh.rotation.y += 0.0002;
+
+      if (isMouseMoving) {
+          raycaster.setFromCamera(mouse, camera);
+          const intersects = raycaster.intersectObject(hitSphere);
+          if (intersects.length > 0) {
+              targetDentStrength = 1.0;
+              targetCursor.copy(intersects[0].point);
+          } else {
+              targetDentStrength = 0.0;
+          }
+      }
+      
+      currentDentStrength += (targetDentStrength - currentDentStrength) * 0.1;
+      if (currentDentStrength > 0.01) currentCursor.lerp(targetCursor, 0.15); 
+      
+      localDentPoint.copy(currentCursor);
+      holoMeshSolid.worldToLocal(localDentPoint);
+
+      let t = time * 0.8; 
+      holoGeometry.positionData.forEach((p, idx) => {
+          let setNoise = noise(p.x, p.y, p.z, t);
+          v3.copy(p).addScaledVector(p, setNoise * 0.15); 
+          if (currentDentStrength > 0.001) {
+              let dist = p.distanceTo(localDentPoint);
+              if (dist < 2.5) {
+                  let falloff = Math.pow(1 - (dist / 2.5), 2);
+                  v3.multiplyScalar(1 - (falloff * 0.45 * currentDentStrength)); 
+              }
+          }
+          holoGeometry.attributes.position.setXYZ(idx, v3.x, v3.y, v3.z);
+      });
+      
+      holoMeshWire.rotation.y += 0.001;
+      holoMeshWire.rotation.x += 0.0005;
+      holoMeshSolid.rotation.copy(holoMeshWire.rotation);
+      holoGeometry.computeVertexNormals();
+      holoGeometry.attributes.position.needsUpdate = true;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ==========================================
+    // 4. GAINGUARD CONTENT & UI LOGIC
+    // ==========================================
+    const menuOptions = ["Principles of GainGuard", "How It Works", "Membership Benefits", "Pricing", "GainGuard Lifestyle", "Worldwide"];
+    const pageData = {
+        "Principles of GainGuard": "<p>In the modern gym, your hypertrophy is constantly under threat. The biggest dangers aren't poor form—they are <strong>Visual Leeching</strong>, <strong>Ghosting</strong> (mimicking movements to steal gains), and <strong>Spotter Siphoning</strong>.</p><p>GainGuard is a revolutionary security protocol designed to protect your pump. We believe that your mass belongs to you, and we provide the defensive gear to ensure no one steals your hard-earned progress.</p>",
+        "How It Works": "<p>Our sci-fi digital portal connects you to a network of active defense systems.</p><ul><li><strong>Gain Audits:</strong> We analyze your environment for potential leeching threats.</li><li><strong>Decoy Jugs:</strong> Deploy high-visibility water jugs to distract opportunistic siphons.</li><li><strong>Defensive Gear:</strong> Wearable tech designed to reflect predatory gym stares and secure your aura.</li></ul>",
+        "Membership Benefits": "<p>When you join GainGuard, you step into a secure sphere of muscular development. Benefits include:</p><ul><li>100% Protection from Ghosting</li><li>Spotter Background Checks</li><li>Access to our nuclear-green encrypted portal</li><li>Optional: Dedicated on-site bodyguards to ensure your sets remain uncontaminated.</li></ul>",
+        "Pricing": "<div class='pricing-tier'><h3>Natty Defender - $9.99/mo</h3><p>Basic visual protection and anti-stare shielding.</p></div><div class='pricing-tier'><h3>Swole Sentinel - $29.99/mo</h3><p>Advanced aura shielding and decoy jug access.</p></div><div class='pricing-tier'><h3>Mass Monarch - $99.99/mo</h3><p>Complete gym lockdown. Dedicated bodyguard escort and full gain audits.</p></div>",
+        "GainGuard Lifestyle": "<p>The gym is a battlefield. Embrace the paranoia.</p><p>Our nuclear green and chrome aesthetic isn't just a look—it's a warning. Living the GainGuard lifestyle means extreme vigilance. We create humorous, elaborate barriers to entry so you can lift in peace. Never let someone siphon your hypertrophy again.</p>",
+        "Worldwide": "<p>Gain theft knows no borders. Whether you're lifting at your local spot, or hitting a private facility overseas, our global network of anti-leeching safe zones has you covered.</p><p><strong>GainGuard: Protecting global mass, one rep at a time.</strong></p>"
+    };
+
+    const wheel = document.getElementById('wheel');
+    const pageWrapper = document.getElementById('page-wrapper');
+    
+    const ITEM_ANGLE = window.innerWidth <= 768 ? 24 : 16; 
+    
+    let selectedIndex = 0; 
+    let previousIndex = 0;
+    let currentRotation = 0;
+    let isDragging = false;
+    let startY = 0, startRotation = 0;
+    let clickStartX = 0, clickStartY = 0;
+    let isPageOpen = false;
+
+    const domItems = menuOptions.map((text, i) => {
+      const spoke = document.createElement('div');
+      spoke.className = 'spoke';
+      spoke.style.transform = `rotate(${i * ITEM_ANGLE}deg)`;
+      const item = document.createElement('div');
+      item.className = 'menu-item';
+      item.textContent = text;
+      
+      item.addEventListener('click', () => {
+          if (selectedIndex === i && isPageOpen) {
+              closePage();
+          } else {
+              setSelectedIndex(i); 
+              openPage(i); 
+          }
+      });
+      spoke.appendChild(item);
+      wheel.appendChild(spoke);
+      return item;
+    });
+
+    function updateWheelVisuals() {
+      wheel.style.transform = `rotate(${currentRotation}deg)`;
+      domItems.forEach((item, i) => {
+        let absoluteAngle = (i * ITEM_ANGLE) + currentRotation;
+        let dist = Math.abs(absoluteAngle);
+        if (dist < 2) item.classList.add('active');
+        else item.classList.remove('active');
+        
+        let opacity = Math.max(0, 1 - (dist / (ITEM_ANGLE * 2.5)));
+        item.style.opacity = opacity;
+        item.style.pointerEvents = 'auto'; // Ensures low opacity items are always clickable
+      });
+    }
+
+    function setSelectedIndex(index) {
+      selectedIndex = Math.max(0, Math.min(index, menuOptions.length - 1));
+      currentRotation = -(selectedIndex * ITEM_ANGLE); 
+      updateWheelVisuals();
+      
+      if (selectedIndex !== previousIndex) {
+          playSfx(sfxScroll);
+          previousIndex = selectedIndex;
+      }
+    }
+
+    function openPage(index) {
+        if (!isPageOpen) playSfx(sfxOpen); 
+        const key = menuOptions[index];
+        document.getElementById('page-title').textContent = key;
+        document.getElementById('page-body').innerHTML = pageData[key];
+        pageWrapper.classList.add('open');
+        isPageOpen = true;
+    }
+
+    function closePage() {
+        if (isPageOpen) playSfx(sfxClose);
+        pageWrapper.classList.remove('open');
+        isPageOpen = false;
+    }
+
+    // --- Drag & Click Logic ---
+    function dragStart(e) {
+      if (e.target.closest('#page-wrapper')) return; 
+      isDragging = true;
+      startY = e.touches ? e.touches[0].clientY : e.clientY;
+      clickStartX = e.touches ? e.touches[0].clientX : e.clientX;
+      clickStartY = startY;
+      startRotation = currentRotation;
+      wheel.style.transition = 'none'; 
+    }
+
+    function dragMove(e) {
+      if (!isDragging || e.target.closest('#page-wrapper')) return;
+      let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      // Adjusted multiplier to make swiping smoother and more proportional
+      currentRotation = startRotation + ((clientY - startY) * 0.25); 
+      updateWheelVisuals();
+    }
+
+    function dragEnd(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      wheel.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1)'; 
+      
+      let endX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+      let endY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+      let dist = Math.sqrt(Math.pow(endX - clickStartX, 2) + Math.pow(endY - clickStartY, 2));
+
+      if (dist < 10 && e.target.id === 'ui-layer' && isPageOpen) {
+          closePage();
+      } else if (dist >= 10) {
+          let nearestIndex = Math.round(-currentRotation / ITEM_ANGLE);
+          setSelectedIndex(nearestIndex); 
+          if (isPageOpen) openPage(selectedIndex);
+      }
+    }
+
+    // --- Scroll Logic ---
+    let scrollAccumulator = 0;
+    window.addEventListener('wheel', (e) => {
+        if (e.target.closest('#page-wrapper')) return; 
+        scrollAccumulator += e.deltaY;
+        if (Math.abs(scrollAccumulator) > 50) { 
+            const dir = scrollAccumulator > 0 ? 1 : -1;
+            setSelectedIndex(selectedIndex + dir);
+            if (isPageOpen) openPage(selectedIndex);
+            scrollAccumulator = 0;
+        }
+    }, {passive: true});
+
+    const uiLayer = document.getElementById('ui-layer');
+    uiLayer.addEventListener('mousedown', dragStart);
+    uiLayer.addEventListener('mousemove', dragMove);
+    window.addEventListener('mouseup', dragEnd);
+    uiLayer.addEventListener('touchstart', dragStart, {passive: true});
+    uiLayer.addEventListener('touchmove', dragMove, {passive: true});
+    window.addEventListener('touchend', dragEnd);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') { setSelectedIndex(selectedIndex - 1); if (isPageOpen) openPage(selectedIndex); }
+      if (e.key === 'ArrowDown') { setSelectedIndex(selectedIndex + 1); if (isPageOpen) openPage(selectedIndex); }
+      if (e.key === 'Escape') closePage();
+    });
+
+    setSelectedIndex(0);
+  </script>
+</body>
+</html>
